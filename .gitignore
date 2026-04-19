@@ -1,0 +1,30 @@
+# Binaries
+/server
+/bin/
+/dist/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Internal development planning docs
+docs/superpowers/
+
+# GeoJSON data files (use S3 or local uploads dir for data)
+*.geojson
+!internal/datasource/file/testdata/*.geojson
+
+# Uploaded files
+uploads/
+
+# IDE
+.cursor/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Go
+*.mod.bak

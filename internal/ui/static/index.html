@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meridian</title>
+  <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app" x-data="app()" x-init="init()" x-cloak>
+
+  <!-- ═══════════════════════════════════════
+       SIDEBAR
+  ════════════════════════════════════════════ -->
+  <aside class="sidebar">
+
+    <!-- Header -->
+    <div class="sidebar-header">
+      <span class="wordmark">Meridian</span>
+      <div class="health-indicator">
+        <span class="health-dot" :class="health === 'error' ? 'error' : ''"></span>
+        <span class="health-label" x-text="health"></span>
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <template x-for="tab in ['layers','sources','styles','logs']" :key="tab">
+        <button class="tab-btn"
+          :class="activeTab === tab ? 'active' : ''"
+          @click="switchTab(tab)"
+          x-text="tab">
+        </button>
+      </template>
+    </div>
+
+    <!-- Content (list or form) -->
+    <div class="content-area">
+
+      <!-- ── LIST VIEW ── -->
+      <div class="content-inner" x-show="!form.open" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+
+        <!-- SOURCES LIST -->
+        <div class="list-view" x-show="activeTab === 'sources'">
+          <div class="list-scroll">
+            <div class="empty-state" x-show="sources.length === 0">No sources yet</div>
+            <template x-for="src in sources" :key="src.ID">
+              <div>
+                <!-- Normal row -->
+                <div class="list-item"
+                  x-show="!(deleteConfirm && deleteConfirm.type === 'source' && deleteConfirm.id === src.ID)">
+                  <span class="item-tag" x-text="src.Type"></span>
+                  <span class="item-name" x-text="src.Name"></span>
+                  <div class="item-actions">
+                    <button class="icon-btn"
+                      @click="deleteConfirm = {type:'source', id:src.ID}"
+                      title="Delete">
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <!-- Delete confirm row -->
+                <div class="delete-confirm"
+                  x-show="deleteConfirm && deleteConfirm.type === 'source' && deleteConfirm.id === src.ID">
+                  <span class="delete-confirm-label">Delete <strong x-text="src.Name"></strong>?</span>
+                  <button class="btn-sm-ghost" @click="deleteConfirm = null">Cancel</button>
+                  <button class="btn-danger" @click="deleteSource(src.ID)">Delete</button>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="list-add">
+            <button class="btn-primary"
+              @click="openForm('source','create',{type:'geojson'})">
+              + Add Source
+            </button>
+          </div>
+        </div>
+
+        <!-- LAYERS LIST -->
+        <div class="list-view" x-show="activeTab === 'layers'">
+          <div class="list-scroll">
+            <div class="empty-state" x-show="layers.length === 0">No layers yet</div>
+            <template x-for="layer in layers" :key="layer.ID">
+              <div>
+                <div class="list-item"
+                  x-show="!(deleteConfirm && deleteConfirm.type === 'layer' && deleteConfirm.id === layer.ID)">
+                  <span class="item-name" x-text="layer.Name"></span>
+                  <span class="geom-badge" x-show="layer.GeomType" x-text="layer.GeomType"></span>
+                  <div class="item-actions">
+                    <button class="icon-btn" @click="zoomToLayer(layer)" title="Zoom to layer">
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M11 8v6M8 11h6"/>
+                      </svg>
+                    </button>
+                    <button class="icon-btn" @click="openLayerEditForm(layer)" title="Edit">
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                      </svg>
+                    </button>
+                    <button class="icon-btn"
+                      @click="deleteConfirm = {type:'layer', id:layer.ID}"
+                      title="Delete">
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="delete-confirm"
+                  x-show="deleteConfirm && deleteConfirm.type === 'layer' && deleteConfirm.id === layer.ID">
+                  <span class="delete-confirm-label">Delete <strong x-text="layer.Name"></strong>?</span>
+                  <button class="btn-sm-ghost" @click="deleteConfirm = null">Cancel</button>
+                  <button class="btn-danger" @click="deleteLayer(layer.ID)">Delete</button>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="list-add">
+            <button class="btn-primary"
+              @click="openForm('layer','create',{srs:['EPSG:4326'],showOnMap:true,bboxMinLon:-180,bboxMinLat:-90,bboxMaxLon:180,bboxMaxLat:90})">
+              + Add Layer
+            </button>
+          </div>
+        </div>
+
+        <!-- STYLES LIST -->
+        <div class="list-view" x-show="activeTab === 'styles'">
+          <div class="list-scroll">
+            <div class="empty-state" x-show="styles.length === 0">No styles yet</div>
+            <template x-for="sty in styles" :key="sty.ID">
+              <div>
+                <div class="list-item"
+                  x-show="!(deleteConfirm && deleteConfirm.type === 'style' && deleteConfirm.id === sty.ID)">
+                  <span class="item-color-dot"
+                    :style="`background:${sty.FillColor};outline:2px solid ${sty.StrokeColor};outline-offset:-1px`">
+                  </span>
+                  <span class="item-name" x-text="sty.Name"></span>
+                  <div class="item-actions">
+                    <button class="icon-btn"
+                      @click="deleteConfirm = {type:'style', id:sty.ID}"
+                      title="Delete">
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="delete-confirm"
+                  x-show="deleteConfirm && deleteConfirm.type === 'style' && deleteConfirm.id === sty.ID">
+                  <span class="delete-confirm-label">Delete <strong x-text="sty.Name"></strong>?</span>
+                  <button class="btn-sm-ghost" @click="deleteConfirm = null">Cancel</button>
+                  <button class="btn-danger" @click="deleteStyle(sty.ID)">Delete</button>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="list-add">
+            <button class="btn-primary"
+              @click="openForm('style','create',{fill_color:'#3388ff',stroke_color:'#ffffff',stroke_width:1.0,opacity:1.0})">
+              + Add Style
+            </button>
+          </div>
+        </div>
+
+        <!-- LOGS -->
+        <div class="list-view" x-show="activeTab === 'logs'" style="padding:12px;display:flex;flex-direction:column;gap:8px;height:100%">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <select class="input" style="width:auto" x-model="logsLevel" @change="loadLogs()">
+              <option value="ALL">All levels</option>
+              <option value="DEBUG">DEBUG+</option>
+              <option value="INFO">INFO+</option>
+              <option value="WARN">WARN+</option>
+              <option value="ERROR">ERROR only</option>
+            </select>
+            <select class="input" style="width:auto" x-model.number="logsLimit" @change="loadLogs()">
+              <option value="100">Last 100</option>
+              <option value="200">Last 200</option>
+              <option value="500">Last 500</option>
+            </select>
+            <button class="btn-primary" type="button" @click="loadLogs()">Refresh</button>
+            <label style="display:flex;gap:4px;align-items:center;cursor:pointer;font-size:13px">
+              <input type="checkbox" x-model="logsTail" @change="toggleLogsTail()">
+              Auto-refresh (5s)
+            </label>
+            <span style="font-size:11px;color:var(--text-muted)" x-text="logsStatus"></span>
+          </div>
+          <div style="flex:1;overflow-y:auto;background:var(--bg-elevated);border-radius:8px;padding:8px;font-family:monospace;font-size:12px;line-height:1.6">
+            <template x-if="logsEntries.length === 0">
+              <div style="color:var(--text-muted);padding:8px">No log entries yet.</div>
+            </template>
+            <template x-for="(entry, idx) in logsEntries" :key="idx">
+              <div style="display:flex;gap:8px;border-bottom:1px solid var(--border);padding:2px 0">
+                <span style="color:var(--text-muted);white-space:nowrap" x-text="formatLogTime(entry.time)"></span>
+                <span :class="levelClass(entry.level)" style="width:40px;text-align:center;font-weight:600;flex-shrink:0" x-text="entry.level"></span>
+                <span x-text="entry.msg" style="flex:1"></span>
+                <span x-show="entry.attrs && Object.keys(entry.attrs).length" style="color:var(--text-muted);font-size:11px" x-text="JSON.stringify(entry.attrs)"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+      </div><!-- end list view -->
+
+      <!-- ── FORM VIEW ── -->
+      <div class="form-view" x-show="form.open">
+
+        <!-- Form header -->
+        <div class="form-header">
+          <button class="icon-btn" @click="closeForm()" title="Back">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:16px;height:16px">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+          </button>
+          <span class="form-title" x-text="formTitle()"></span>
+        </div>
+
+        <!-- Form body -->
+        <div class="form-body">
+
+          <!-- SOURCE FORM -->
+          <div x-show="form.type === 'source'">
+            <div class="field">
+              <label class="field-label">Name *</label>
+              <input class="input" type="text" x-model="form.data.name" placeholder="my_source">
+            </div>
+            <div class="field">
+              <label class="field-label">Type</label>
+              <select class="input" x-model="form.data.type">
+                <option value="geojson">GeoJSON</option>
+                <option value="postgis">PostGIS</option>
+              </select>
+            </div>
+            <!-- PostGIS: JSON config textarea -->
+            <div class="field" x-show="form.data.type === 'postgis'">
+              <label class="field-label">Config (JSON)</label>
+              <textarea class="input mono" rows="5" x-model="form.data.config"
+                placeholder='{"conn_string":"postgres://user:pass@host/db","table":"public.roads","geom_column":"geom"}'>
+              </textarea>
+            </div>
+            <!-- GeoJSON: file picker -->
+            <div class="field" x-show="form.data.type === 'geojson'">
+              <label class="field-label">GeoJSON File *</label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="file" accept=".geojson,.json" style="display:none"
+                  x-ref="fileInput"
+                  @change="form.data.file = $event.target.files[0]">
+                <span class="btn-ghost" style="pointer-events:none;white-space:nowrap">Choose file…</span>
+                <span style="font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                  x-text="form.data.file ? form.data.file.name : 'No file chosen'"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- LAYER FORM -->
+          <div x-show="form.type === 'layer'">
+            <div class="field">
+              <label class="field-label">Name *</label>
+              <input class="input" type="text" x-model="form.data.name" placeholder="roads">
+            </div>
+            <div class="field">
+              <label class="field-label">Title</label>
+              <input class="input" type="text" x-model="form.data.title" placeholder="Road Network">
+            </div>
+            <div class="field">
+              <label class="field-label">Source *</label>
+              <select class="input" x-model="form.data.source_id">
+                <option value="">— select source —</option>
+                <template x-for="src in sources" :key="src.ID">
+                  <option :value="src.ID" x-text="src.Name"></option>
+                </template>
+              </select>
+            </div>
+            <div class="field" x-show="sourceTypeForId(form.data.source_id) === 'postgis'">
+              <label class="field-label">Source Layer (table)</label>
+              <input class="input" type="text" x-model="form.data.source_layer"
+                placeholder="public.roads">
+            </div>
+            <div class="field">
+              <label class="field-label">Style</label>
+              <select class="input" x-model="form.data.style_id">
+                <option value="">— none —</option>
+                <template x-for="sty in styles" :key="sty.ID">
+                  <option :value="sty.ID" x-text="sty.Name"></option>
+                </template>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label">CRS</label>
+              <label class="check-row">
+                <input type="checkbox" value="EPSG:4326"
+                  :checked="form.data.srs && form.data.srs.includes('EPSG:4326')"
+                  @change="toggleSrs('EPSG:4326')">
+                <span class="check-label" style="font-family:monospace">EPSG:4326</span>
+              </label>
+              <label class="check-row">
+                <input type="checkbox" value="EPSG:3857"
+                  :checked="form.data.srs && form.data.srs.includes('EPSG:3857')"
+                  @change="toggleSrs('EPSG:3857')">
+                <span class="check-label" style="font-family:monospace">EPSG:3857</span>
+              </label>
+            </div>
+            <div class="field">
+              <label class="field-label">BBox (lon / lat)</label>
+              <div class="grid-2">
+                <div>
+                  <label class="field-label" style="font-size:10px">Min Lon</label>
+                  <input class="input" type="number" step="any" x-model.number="form.data.bboxMinLon">
+                </div>
+                <div>
+                  <label class="field-label" style="font-size:10px">Min Lat</label>
+                  <input class="input" type="number" step="any" x-model.number="form.data.bboxMinLat">
+                </div>
+                <div>
+                  <label class="field-label" style="font-size:10px">Max Lon</label>
+                  <input class="input" type="number" step="any" x-model.number="form.data.bboxMaxLon">
+                </div>
+                <div>
+                  <label class="field-label" style="font-size:10px">Max Lat</label>
+                  <input class="input" type="number" step="any" x-model.number="form.data.bboxMaxLat">
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label class="check-row">
+                <input type="checkbox" x-model="form.data.showOnMap">
+                <span class="check-label">Show on map</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- STYLE FORM -->
+          <div x-show="form.type === 'style'">
+            <div class="field">
+              <label class="field-label">Name *</label>
+              <input class="input" type="text" x-model="form.data.name" placeholder="my_style">
+            </div>
+            <div class="field">
+              <label class="field-label">Fill Color</label>
+              <div class="color-field">
+                <input type="color" x-model="form.data.fill_color">
+                <input class="input" type="text" x-model="form.data.fill_color">
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Stroke Color</label>
+              <div class="color-field">
+                <input type="color" x-model="form.data.stroke_color">
+                <input class="input" type="text" x-model="form.data.stroke_color">
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Stroke Width</label>
+              <input class="input" type="number" step="0.5" min="0" x-model.number="form.data.stroke_width">
+            </div>
+            <div class="field">
+              <div class="range-header">
+                <label class="field-label" style="margin:0">Opacity</label>
+                <span style="font-size:11px;color:var(--text-muted);font-family:monospace"
+                  x-text="(+(form.data.opacity||1)).toFixed(2)"></span>
+              </div>
+              <input type="range" min="0" max="1" step="0.01" x-model.number="form.data.opacity">
+            </div>
+          </div>
+
+        </div><!-- end form-body -->
+
+        <!-- Form footer -->
+        <div class="form-footer">
+          <button class="btn-ghost" @click="closeForm()">Cancel</button>
+          <button class="btn-primary" style="flex:1" @click="submitForm()" :disabled="submitting">
+            <span x-text="submitting ? 'Saving…' : (form.mode === 'edit' ? 'Save Changes' : 'Create')"></span>
+          </button>
+        </div>
+      </div><!-- end form view -->
+
+    </div><!-- end content-area -->
+
+    <!-- Metrics strip -->
+    <div class="metrics-strip">
+      <div class="metrics-grid">
+        <div class="metric-cell">
+          <div class="metric-value" x-text="metrics.requests"></div>
+          <div class="metric-label">Req</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-value" x-text="metrics.getmap"></div>
+          <div class="metric-label">GetMap</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-value" x-text="metrics.cacheHits"></div>
+          <div class="metric-label">Hits</div>
+        </div>
+        <div class="metric-cell" :class="metrics.errors > 0 ? 'has-error' : ''">
+          <div class="metric-value" x-text="metrics.errors"></div>
+          <div class="metric-label">Err</div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ═══════════════════════════════════════
+       MAP PANEL
+  ════════════════════════════════════════════ -->
+  <main class="map-panel">
+    <div id="map"></div>
+
+    <!-- Layer visibility control -->
+    <div class="layer-control" x-show="layers.length > 0">
+      <div class="layer-control-title">Layers</div>
+      <template x-for="layer in layers" :key="layer.ID">
+        <div class="layer-toggle-row">
+          <label class="layer-toggle">
+            <input type="checkbox"
+              :checked="isLayerVisible(layer.ID)"
+              @change="toggleWmsTile(layer)">
+            <span class="layer-toggle-name" x-text="layer.Name"></span>
+            <span class="geom-badge-sm" x-show="layer.GeomType" x-text="layer.GeomType"></span>
+          </label>
+          <button class="layer-zoom-btn" @click="zoomToLayer(layer)" title="Zoom to layer">⊕</button>
+        </div>
+      </template>
+    </div>
+  </main>
+
+</div><!-- end .app -->
+
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script src="/static/app.js"></script>
+<script src="/static/vendor/alpine.min.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+services:
+  postgis:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_DB: gis
+      POSTGRES_USER: gis
+      POSTGRES_PASSWORD: gis
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gis"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  meridian:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DB_PATH: /data/meridian.db
+      ADDR: ":8080"
+    volumes:
+      - meridian_data:/data
+    depends_on:
+      postgis:
+        condition: service_healthy
+
+volumes:
+  meridian_data:

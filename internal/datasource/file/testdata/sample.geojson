@@ -1,0 +1,23 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [35.9106, 31.9539] },
+      "properties": { "name": "Amman" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [36.2021, 37.1343] },
+      "properties": { "name": "Aleppo" }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[10.0, 45.0],[15.0, 45.0],[15.0, 50.0],[10.0, 50.0],[10.0, 45.0]]]
+      },
+      "properties": { "name": "Region A" }
+    }
+  ]
+}

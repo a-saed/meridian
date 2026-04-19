@@ -1,0 +1,43 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Cairo"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [31.2357, 30.0444]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Alexandria"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [29.9187, 31.2001]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Giza Plateau Area"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [30.95, 29.95],
+            [31.55, 29.95],
+            [31.55, 30.35],
+            [30.95, 30.35],
+            [30.95, 29.95]
+          ]
+        ]
+      }
+    }
+  ]
+}
