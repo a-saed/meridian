@@ -32,6 +32,7 @@ function app() {
     logsTail:    false,
     logsPollId:  null,
     logsLoading: false,
+    sidebarWide: false,
 
     // ── Init ───────────────────────────────────
     async init() {

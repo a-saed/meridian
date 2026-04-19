@@ -255,3 +255,6 @@ textarea.input { resize: vertical; }
 .log-warn  { color: #fbbf24; }
 .log-info  { color: #60a5fa; }
 .log-debug { color: #9ca3af; }
+
+.sidebar.wide { width: 680px; }
+.sidebar-expand-btn { margin-left: auto; flex-shrink: 0; }

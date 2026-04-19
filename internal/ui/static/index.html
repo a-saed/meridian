@@ -13,7 +13,7 @@
   <!-- ═══════════════════════════════════════
        SIDEBAR
   ════════════════════════════════════════════ -->
-  <aside class="sidebar">
+  <aside class="sidebar" :class="sidebarWide && 'wide'">
 
     <!-- Header -->
     <div class="sidebar-header">
@@ -22,6 +22,16 @@
         <span class="health-dot" :class="health === 'error' ? 'error' : ''"></span>
         <span class="health-label" x-text="health"></span>
       </div>
+      <button class="icon-btn sidebar-expand-btn" @click="sidebarWide = !sidebarWide" :title="sidebarWide ? 'Collapse panel' : 'Expand panel'">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <template x-if="!sidebarWide">
+            <path d="M2 8h12M9 4l4 4-4 4M1 2v12"/>
+          </template>
+          <template x-if="sidebarWide">
+            <path d="M14 8H2M7 4L3 8l4 4M15 2v12"/>
+          </template>
+        </svg>
+      </button>
     </div>
 
     <!-- Tab bar -->
